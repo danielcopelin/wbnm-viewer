@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1000</width>
-    <height>578</height>
+    <height>622</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -107,6 +107,43 @@
        <attribute name="title">
         <string>Ensemble Plot</string>
        </attribute>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QSplitter" name="splitter_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <widget class="QWidget" name="">
+           <layout class="QVBoxLayout" name="verticalLayout_4">
+            <item>
+             <widget class="QListWidget" name="subareas3ListWidget"/>
+            </item>
+            <item>
+             <widget class="QListWidget" name="aeps2ListWidget"/>
+            </item>
+            <item>
+             <widget class="QListWidget" name="durationsListWidget"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="ensembleButton">
+              <property name="text">
+               <string>Create Ensemble Plot</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="ensembleWidget" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>750</width>
+             <height>0</height>
+            </size>
+           </property>
+          </widget>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="boxTab">
        <attribute name="title">
@@ -149,13 +186,28 @@
       </widget>
       <widget class="QWidget" name="dataTab">
        <attribute name="title">
-        <string>Data</string>
+        <string>Peaks</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
          <widget class="QTableView" name="dataTableView"/>
         </item>
        </layout>
+      </widget>
+      <widget class="QWidget" name="selectorTab">
+       <attribute name="title">
+        <string>Storm Selector</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="basinTab">
+       <attribute name="title">
+        <string>Basin</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="recordedTab">
+       <attribute name="title">
+        <string>Recorded Storm</string>
+       </attribute>
       </widget>
      </widget>
     </item>

@@ -70,10 +70,12 @@ def get_peaks(meta_file):
                     storm_dict["subarea"] = peak_results_dict.pop("subarea")
                     for variable, value in peak_results_dict.items():
                         results.append(
-                            {**storm_dict, "variable": variable, "value": float(value)}
+                            {**storm_dict, "variable": variable, "value": value}
                         )
 
     storms_df = pd.DataFrame(results)
+    # storms_df.dur = storms_df.dur.astype(float)
+    storms_df.value = storms_df.value.astype(float)
     return storms_df
 
 

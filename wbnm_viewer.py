@@ -26,9 +26,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import (
     QAction,
     QFileDialog,
-    QSizePolicy,
     QProgressBar,
-    QGraphicsScene,
     QVBoxLayout,
     QWidget,
     QMenuBar,
@@ -49,7 +47,7 @@ from .resources import *
 from .wbnm_viewer_dockwidget import WBNMViewerDockWidget
 import os.path
 
-from .wbnm_plot import plot_single_hydrograph, box_plot
+from .wbnm_plot import single_hydrograph, box_plot, ensembles, update_plot
 from .wbnm_results_parser import get_hydrographs, get_peaks
 from .data_frame_model import DataFrameModel
 
@@ -234,20 +232,29 @@ class WBNMViewer:
         )
         return filename
 
+    def populate_lists(self):
+        processed_peaks = self.peaks[0]
+
+        self.subareas = processed_peaks.subarea.sort_values().unique()
+        self.storms = processed_peaks["storm"].sort_values().unique()
+        self.aeps = processed_peaks["aep"].sort_values().unique()
+        self.durations = processed_peaks["dur"].sort_values().unique()
+
+        self.dockwidget.subareasListWidget.addItems(self.subareas)
+        self.dockwidget.subareas2ListWidget.addItems(self.subareas)
+        self.dockwidget.subareas3ListWidget.addItems(self.subareas)
+        self.dockwidget.stormsListWidget.addItems(self.storms)
+        self.dockwidget.aepsListWidget.addItems(sorted(self.aeps, key=lambda x: float(x)))
+        self.dockwidget.aeps2ListWidget.addItems(sorted(self.aeps, key=lambda x: float(x)))
+        self.dockwidget.durationsListWidget.addItems(sorted(self.durations, key=lambda x: int(x)))
+
     def process_meta_file(self):
         meta_file = self.select_meta_file()
         if meta_file:
             # process peaks
             processed_peaks = get_peaks(meta_file)
             self.peaks.append(processed_peaks)
-
-            self.subareas = processed_peaks.subarea.sort_values().unique()
-            self.storms = processed_peaks["storm"].sort_values().unique()
-            self.aeps = processed_peaks["aep"].sort_values().unique()
-            self.dockwidget.subareasListWidget.addItems(self.subareas)
-            self.dockwidget.subareas2ListWidget.addItems(self.subareas)
-            self.dockwidget.stormsListWidget.addItems(self.storms)
-            self.dockwidget.aepsListWidget.addItems(self.aeps)
+            self.populate_lists()
 
             self.iface.messageBar().pushSuccess(
                 "Success", "Meta file processed successfully!"
@@ -280,44 +287,35 @@ class WBNMViewer:
 
         time = self.hydrographs[0][subarea][storm]["Time"]
         flow = self.hydrographs[0][subarea][storm]["Qout_OS"]
-        fig = plot_single_hydrograph(time, flow)
-
-        if len(self.dockwidget.chartWidget.children()) > 0:
-            canvas = self.dockwidget.chartWidget.children()[2]
-            ax = canvas.figure.get_axes()[0]
-            ax.get_lines()[0].set_xdata(time)
-            ax.get_lines()[0].set_ydata(flow)
-            ax.relim()
-            ax.autoscale_view()
-            canvas.draw_idle()
-        else:
-            canvas = FigureCanvas(fig)
-            toolbar = NavigationToolbar(canvas, self.dockwidget.chartWidget)
-            layout = QVBoxLayout(self.dockwidget.chartWidget)
-            layout.addWidget(toolbar)
-            layout.addWidget(canvas)
+        fig = single_hydrograph(time, flow)
+        update_plot(fig, self.dockwidget.chartWidget)
 
     def plot_box_whisker(self):
         subarea = self.dockwidget.subareas2ListWidget.selectedItems()[0].text()
         aep = self.dockwidget.aepsListWidget.selectedItems()[0].text()
 
         fig = box_plot(subarea, aep, self.peaks[0])
+        update_plot(fig, self.dockwidget.boxWidget)
 
-        if len(self.dockwidget.boxWidget.children()) > 0:
-            pass
-            # canvas = self.dockwidget.boxWidget.children()[2]
-            # ax = canvas.figure.get_axes()[0]
-            # ax.get_lines()[0].set_xdata(time)
-            # ax.get_lines()[0].set_ydata(flow)
-            # ax.relim()
-            # ax.autoscale_view()
-            # canvas.draw_idle()
-        else:
-            canvas = FigureCanvas(fig)
-            toolbar = NavigationToolbar(canvas, self.dockwidget.boxWidget)
-            layout = QVBoxLayout(self.dockwidget.boxWidget)
-            layout.addWidget(toolbar)
-            layout.addWidget(canvas)
+    def plot_ensembles(self):
+        subarea = self.dockwidget.subareas3ListWidget.selectedItems()[0].text()
+        aep = self.dockwidget.aeps2ListWidget.selectedItems()[0].text()
+        duration = self.dockwidget.durationsListWidget.selectedItems()[0].text()
+
+        storms = self.peaks[0].loc[
+            (self.peaks[0].subarea == subarea) &
+            (self.peaks[0].aep == aep) &
+            (self.peaks[0].dur == duration)
+        ].storm.unique()
+
+        times = []
+        flows = []
+        for storm in storms:
+            times.append(self.hydrographs[0][subarea][storm]["Time"])
+            flows.append(self.hydrographs[0][subarea][storm]["Qout_OS"])
+
+        fig = ensembles(times, flows, storms)
+        update_plot(fig, self.dockwidget.ensembleWidget)
 
     def filter_storms(self):
         self.dockwidget.stormsListWidget.clear()
@@ -345,6 +343,7 @@ class WBNMViewer:
                 self.dockwidget.plotButton.clicked.connect(self.plot_hydrograph)
                 self.dockwidget.filterEdit.textChanged.connect(self.filter_storms)
                 self.dockwidget.boxButton.clicked.connect(self.plot_box_whisker)
+                self.dockwidget.ensembleButton.clicked.connect(self.plot_ensembles)
 
                 # set up menubar
                 self.window = QWidget()
