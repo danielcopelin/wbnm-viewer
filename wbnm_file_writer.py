@@ -1,5 +1,14 @@
 import re
 from dataclasses import dataclass
+from itertools import zip_longest
+from typing import Optional
+
+
+def grouper(n, iterable, fillvalue=None):
+    "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return zip_longest(fillvalue=fillvalue, *args)
+
 
 class Runfile:
 
@@ -11,6 +20,7 @@ class Runfile:
         self.display = DisplayBlock(self.contents)
         self.topology = TopologyBlock(self.contents)
         self.surfaces = SurfacesBlock(self.contents)
+        self.flowpaths = FlowpathsBlock(self.contents)
 
     def read(self):
         with open(self.file_path, 'r') as runfile:
@@ -130,31 +140,46 @@ class SurfacesBlock(RunfileBlock):
 class CatchmentRouting:
     name: str
     routing_type: str
-    stream_lag: str
-    delay: str
-    musk_k: str
-    musk_x: str
+    stream_lag: Optional[str] = None
+    delay: Optional[str] = None
+    musk_k: Optional[str] = None
+    musk_x: Optional[str] = None
 
 
 class FlowpathsBlock(RunfileBlock):
 
     start_line = '#####START_FLOWPATHS_BLOCK#########|###########|###########|###########|'
-    end_line = '#####END_FLOWPATHS_BLOCK###########|###########|###########|############|'
+    end_line = '#####END_FLOWPATHS_BLOCK###########|###########|###########|###########|'
+
+    routing_types = {
+        '#####ROUTING': 'routing',
+        '#####DELAY': 'delay',
+        '#####MUSK': 'musk',
+    }
 
     def __init__(self, runfile_contents):
         super().__init__(runfile_contents)
 
         self.num_subareas_with_stream = self.block_contents[0]
-        self.discharge_when_routing_switches = self.block_contents[0]
         self.flowpaths = {}
-        for line in self.block_contents[1:]:
-            name = catchment_surface_line.split()[0]
-            self.surfaces[name] = CatchmentSurface(*catchment_surface_line.split())
+        for name, routing_line, value in grouper(3, self.block_contents[1:]):
+            name = name.strip()
+            routing_type = self.routing_types[routing_line.strip()]
+            if routing_type == 'routing':
+                stream_lag = value.strip()
+                self.flowpaths[name] = CatchmentRouting(name, routing_type, stream_lag=stream_lag)
+            elif routing_type == 'delay':
+                delay = value.strip()
+                self.flowpaths[name] = CatchmentRouting(name, routing_type, delay=delay)
+            elif routing_type == 'musk':
+                musk_k, musk_x = value.strip().split()
+                self.flowpaths[name] = CatchmentRouting(name, routing_type, musk_k=musk_k, musk_x=musk_x)
 
 
 if __name__ == "__main__":
 
     runfile = Runfile(r"test\testrunfile.wbn")
+    print(runfile.flowpaths.flowpaths)
     # print(runfile.preamble.block_contents)
     # new_preamble = 'abcdefgh'.split()
     # runfile.preamble.contents = new_preamble
