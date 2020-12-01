@@ -137,7 +137,7 @@ class SurfacesBlock(RunfileBlock):
 
 
 @dataclass
-class CatchmentRouting:
+class CatchmentFlowpath:
     name: str
     routing_type: str
     stream_lag: Optional[str] = None
@@ -167,13 +167,58 @@ class FlowpathsBlock(RunfileBlock):
             routing_type = self.routing_types[routing_line.strip()]
             if routing_type == 'routing':
                 stream_lag = value.strip()
-                self.flowpaths[name] = CatchmentRouting(name, routing_type, stream_lag=stream_lag)
+                self.flowpaths[name] = CatchmentFlowpath(name, routing_type, stream_lag=stream_lag)
             elif routing_type == 'delay':
                 delay = value.strip()
-                self.flowpaths[name] = CatchmentRouting(name, routing_type, delay=delay)
+                self.flowpaths[name] = CatchmentFlowpath(name, routing_type, delay=delay)
             elif routing_type == 'musk':
                 musk_k, musk_x = value.strip().split()
-                self.flowpaths[name] = CatchmentRouting(name, routing_type, musk_k=musk_k, musk_x=musk_x)
+                self.flowpaths[name] = CatchmentFlowpath(name, routing_type, musk_k=musk_k, musk_x=musk_x)
+
+
+class LocalStructure(RunfileBlock):
+
+    structure_types = {
+        '#####H_S_Q': 'hsq',
+        '#####H_S': 'hs',
+        '#####H_S(TWF)': 'hs_twf',
+        '#####H_S(TWR)': 'hs_twr',
+        '#####H_S(TWC)': 'hs_twc',
+    }
+
+    outlet_types = {
+        '#####BOX': 'box',
+        '#####PIPE': 'pipe',
+        '#####WEIR': 'weir',
+        '#####SCOUR': 'scour',
+    }
+
+    def __init__(self, local_structure_block_contents, local_structure_no):
+
+        self.start_line = f'#####START_LOCAL_STRUCTURE#{local_structure_no}'
+        self.end_line = f'#####END_LOCAL_STRUCTURE#{local_structure_no}'
+
+        super().__init__(local_structure_block_contents)
+        self.description = self.block_contents[0].strip()
+        self.subarea_name = self.block_contents[1].strip()
+        self.structure_type = self.structure_types[self.block_contents[0].strip().split()[1]]
+
+        if self.structure_type
+
+
+class LocalStructuresBlock(RunfileBlock):
+
+    start_line = '#####START_LOCAL_STRUCTURES_BLOCK##|###########|###########|###########|'
+    end_line = '#####END_LOCAL_STRUCTURES_BLOCK####|###########|###########|###########|'
+
+    def __init__(self, runfile_contents):
+        super().__init__(runfile_contents)
+
+        self.structures = {}
+        self.num_subareas_with_local_structure = self.block_contents[0]
+
+        for n in range(1, self.num_subareas_with_local_structure + 1):
+            self.structures[n] = LocalStructure(self.block_contents, n)
 
 
 if __name__ == "__main__":
